@@ -1,0 +1,20 @@
+[project]
+name = "fjc_rs_org"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "jacky2256", email = "a.bojic22@gmail.com"},
+]
+dependencies = ["fastapi>=0.115.12", "loguru>=0.7.3", "alembic>=1.16.1", "pydantic-settings>=2.9.1", "uvicorn>=0.34.3", "asyncpg>=0.30.0", "psycopg2-binary>=2.9.10", "fastapi-pagination>=0.13.2", "sqladmin[full]>=0.21.0"]
+requires-python = ">=3.13"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
+
+[dependency-groups]
+dev = [
+    "mypy>=1.16.0",
+]

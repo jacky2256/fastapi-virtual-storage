@@ -1,0 +1,67 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# PDM
+__pypackages__/
+pdm.lock
+
+# VS Code / PyCharm / IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs
+*.log
+logs/
+
+# Alembic
+alembic/versions/*.pyc
+alembic/versions/__pycache__/
+
+# Database
+*.sqlite3
+*.db
+
+# Python egg metadata and distribution artifacts
+*.egg-info/
+*.egg
+dist/
+build/
+*.tar.gz
+*.whl
+
+# Unit test / coverage
+htmlcov/
+.coverage
+coverage.xml
+.cache
+.pytest_cache/
+
+# mypy, pylint, etc.
+.mypy_cache/
+.dmypy.json
+.pyre/
+ruff_cache/
+
+# OS / system files
+.DS_Store
+Thumbs.db
+
+.env
+config.yaml
+
+.pdm-python
+
+# Ignore all Alembic migration files except __init__.py
+/migrations/versions/*
+!/migrations/versions/__init__.py
