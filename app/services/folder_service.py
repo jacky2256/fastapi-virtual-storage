@@ -102,7 +102,7 @@ class FolderService:
             storage_path=str(new_path),
             virtual_path=new_virt
         )
-        return FolderOut.model_validate(updated_db)
+        return FolderOut.model_validate(updated_db.model_dump())
 
     async def delete(self, folder_id: UUID) -> None:
         """
