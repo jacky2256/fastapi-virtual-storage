@@ -115,6 +115,7 @@ class FolderRepository:
             .where(FolderORM.id == folder_id)
             .values(**values)
         )
+        await self.session.commit()
         return await self.get_by_id(folder_id)
 
     async def delete(self, folder_id: UUID) -> None:

@@ -22,10 +22,10 @@ class FolderOut(FolderIn):
 
 
 class FolderUpdate(BaseModel):
-    name: Optional[FolderName]
-    parent_id: Optional[UUID] = Field(..., description="ID родительской папки")
-    creator_user_id: Optional[UUID] = Field(..., description="ID пользователя, создавшего папку")
-    is_published: Optional[bool] = Field(default=True, description="Могут ли видеть его не зарегистрированные пользователи")
+    name: Optional[FolderName] = Field(default=None)
+    parent_id: Optional[UUID] = Field(default=None, description="ID родительской папки")
+    creator_user_id: Optional[UUID] = Field(default=None, description="ID пользователя, создавшего папку")
+    is_published: Optional[bool] = Field(default=None, description="Могут ли видеть его не зарегистрированные пользователи")
 
 
 class FolderDB(BaseModel):
