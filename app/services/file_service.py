@@ -47,8 +47,8 @@ class FileService:
         db_item: FileDB = await self.repo.get_by_id(file_id)
         return FileOut.model_validate(db_item.model_dump())
 
-    async def get_file_info_for_download(self, file_id: UUID) -> FileDownloadInfo:
-        db_item: FileDB = await self.repo.get_by_id(file_id)
+    async def get_file_info_for_download(self, file_path: str) -> FileDownloadInfo:
+        db_item: FileDB = await self.repo.get_by_path(file_path)
         return FileDownloadInfo.model_validate(db_item.model_dump())
 
     async def upload(

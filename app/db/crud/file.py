@@ -75,6 +75,22 @@ class FileRepository:
             raise NoResultFound(f"File with id {file_id} not found")
         return FileDB.model_validate(file)
 
+    async def get_by_path(self, file_path: str) -> FileDB:
+        """
+        Retrieve a single File by its Path.
+
+        :param file_path: the virtual path of the file to fetch
+        :returns: FileDB if found
+        :raises: NoResultFound if no matching record exists
+        """
+        q = await self.session.execute(
+            select(FileORM).where(FileORM.virtual_path == file_path)
+        )
+        file = q.scalar_one_or_none()
+        if file is None:
+            raise NoResultFound(f"File with path {file_path} not found")
+        return FileDB.model_validate(file)
+
     async def list_by_folder(self, folder_id: Optional[UUID]) -> List[FileDB]:
         """
         List all files under a given folder.

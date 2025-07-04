@@ -15,8 +15,8 @@ class Folder(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False, doc="Название папки")
-    storage_path: Mapped[str] = mapped_column(String, nullable=False, doc="Реальная часть пути к папке на диске")
-    virtual_path: Mapped[str] = mapped_column(String, nullable=False, doc="Виртуальная часть пути на сайте")
+    storage_path: Mapped[str] = mapped_column(String, unique=True, nullable=False, doc="Реальная часть пути к папке на диске")
+    virtual_path: Mapped[str] = mapped_column(String, unique=True, nullable=False, doc="Виртуальная часть пути на сайте")
     creator_user_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("fjc_folder.id", ondelete="CASCADE"), nullable=True, doc="ID родительской папки")
     access_url: Mapped[Optional[str]] = mapped_column(String, nullable=True, doc="URL для доступа к папке")
@@ -37,8 +37,8 @@ class File(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False, doc="Название файла")
-    storage_path: Mapped[str] = mapped_column(String, nullable=False, doc="Реальная часть пути к файлу на диске")
-    virtual_path: Mapped[str] = mapped_column(String, nullable=False, doc="Виртуальный путь к файлу на сайте")
+    storage_path: Mapped[str] = mapped_column(String, unique=True, nullable=False, doc="Реальная часть пути к файлу на диске")
+    virtual_path: Mapped[str] = mapped_column(String, unique=True, nullable=False, doc="Виртуальный путь к файлу на сайте")
     uploader_user_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     size_bytes: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False, doc="Размер файла в байтах")
     mime_type: Mapped[str] = mapped_column(String, nullable=False, doc="Тип файла 'image/jpeg', 'application/pdf', 'video/mp4'")

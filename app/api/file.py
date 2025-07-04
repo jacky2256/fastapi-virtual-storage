@@ -16,9 +16,8 @@ router = APIRouter(
     tags=["Files"]
 )
 
-
 @router.get(
-    "/{file_id}",
+    "/download",
     response_class=FileResponse,
     status_code=status.HTTP_200_OK,
     responses={
@@ -28,14 +27,14 @@ router = APIRouter(
     summary="Download a file by its ID",
 )
 async def download_file(
-    file_id: uuid.UUID,
+    file_path: str,
     service: FileService = Depends(get_file_service),
 ):
     """
     Download a file given its UUID.
     """
     try:
-        file_out = await service.get_file_info_for_download(file_id)
+        file_out = await service.get_file_info_for_download(file_path)
         return FileResponse(
             path=file_out.storage_path,
             filename=file_out.name,
