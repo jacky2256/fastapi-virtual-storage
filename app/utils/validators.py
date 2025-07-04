@@ -12,7 +12,7 @@ def validate_no_slash(name: str) -> str:
         raise ValueError("Folder name cannot contain '/'")
     return name
 
-FolderName = Annotated[
+NoSlashString = Annotated[
     str,
     Field(
             min_length=1,

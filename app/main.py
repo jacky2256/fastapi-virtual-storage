@@ -40,6 +40,7 @@ app.add_middleware(
 
 app.include_router(api.healthcheck_router)
 app.include_router(api.folder_router)
+app.include_router(api.file_router)
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
