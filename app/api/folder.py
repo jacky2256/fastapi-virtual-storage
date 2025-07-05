@@ -3,17 +3,69 @@
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status as http_status
+from fastapi import APIRouter, Depends, Query, HTTPException, status as http_status
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from app.schemas.folder import FolderIn, FolderOut, FolderUpdate
 from app.services.folder_service import FolderService
 from app.dependencies import get_folder_service
+from app.utils.exceptions import FolderAlreadyExistsError
 
 router = APIRouter(
     prefix="/folders",
     tags=["Folders"]
 )
+
+@router.get(
+    "/by-path",
+    response_model=FolderOut,
+    status_code=http_status.HTTP_200_OK,
+    responses={
+        404: {"description": "Folder not found"},
+        422: {"description": "Validation Error"},
+        500: {"description": "Internal server error"},
+    }
+)
+async def get_folder_by_virtual_path(
+    path: str = Query(...,description="Unique virtual path of the folder, e.g. '/library/24/'"),
+    service: FolderService = Depends(get_folder_service),
+) -> FolderOut:
+    """
+    Retrieve a folder by its unique virtual path.
+
+    - **Query Parameter**:
+      - `virtual_path` (string): The virtual URL/path of the folder to retrieve (must end and begin with a slash).
+
+    - **Response Model** (`FolderOut`):
+      | Field             | Type      | Description                                 |
+      |-------------------|-----------|---------------------------------------------|
+      | `id`              | UUID      | Unique identifier of the folder             |
+      | `name`            | string    | Name of the folder                          |
+      | `parent_id`       | UUID      | ID of the parent folder, or `null` if root  |
+      | `creator_user_id` | UUID      | ID of the user who created the folder       |
+      | `is_published`    | bool      | Visibility flag for unauthenticated users   |
+      | `virtual_path`    | string    | Virtual path of the folder on the website   |
+      | `created_at`      | datetime  | Timestamp when the folder was created       |
+      | `updated_at`      | datetime  | Timestamp when the folder was last updated  |
+
+    - **Responses**:
+      - **200 OK**: Folder was successfully retrieved.
+      - **404 Not Found**: No folder found with the given virtual path.
+      - **422 Unprocessable Entity**: Validation error on input.
+      - **500 Internal Server Error**: Unexpected error occurred.
+    """
+    try:
+        return await service.get_by_virtual_path(path)
+    except NoResultFound as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @router.get(
@@ -53,7 +105,7 @@ async def get_folder_by_id(
       - **500 Internal Server Error**: Unexpected error occurred.
     """
     try:
-        return await service.get_folder_by_id(folder_id)
+        return await service.get_by_id(folder_id)
     except NoResultFound as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -64,7 +116,6 @@ async def get_folder_by_id(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
-
 
 @router.get(
     "/",
@@ -144,6 +195,11 @@ async def create_folder(
         raise HTTPException(
             status_code=http_status.HTTP_409_CONFLICT,
             detail=f"Database constraint error: {e}",
+        )
+    except FolderAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_409_CONFLICT,
+            detail=f"Folder already exists: {e}",
         )
     except Exception as e:
         raise HTTPException(

@@ -10,6 +10,7 @@ from sqlalchemy.exc import NoResultFound
 from app.db.crud.folder import FolderRepository
 from app.services.folder_disc_service import FolderDiskService
 from app.schemas.folder import FolderIn, FolderUpdate, FolderDB, FolderOut
+from app.utils.exceptions import FolderAlreadyExistsError
 
 
 class FolderService:
@@ -40,11 +41,18 @@ class FolderService:
         db_items: List[FolderDB] = await self.repo.list_by_parent(parent_id)
         return [FolderOut.model_validate(item) for item in db_items]
 
-    async def get_folder_by_id(self, folder_id: UUID) -> FolderOut:
+    async def get_by_id(self, folder_id: UUID) -> FolderOut:
         """
         Retrieve a folder by its ID, or raise NoResultFound.
         """
         db_item: FolderDB = await self.repo.get_by_id(folder_id)
+        return FolderOut.model_validate(db_item.model_dump())
+
+    async def get_by_virtual_path(self, path: str) -> FolderOut:
+        """
+        Retrieve a folder by its ID, or raise NoResultFound.
+        """
+        db_item: FolderDB = await self.repo.get_by_virtual_path(path)
         return FolderOut.model_validate(db_item.model_dump())
 
     async def create(self, data: FolderIn) -> FolderOut:
@@ -52,11 +60,19 @@ class FolderService:
         Create folder on disk and in DB, return FolderOut.
         """
         # virtual_path
+
         if data.parent_id:
             parent = await self.repo.get_by_id(data.parent_id)
             virt = parent.virtual_path.rstrip("/") + f"/{data.name}/"
         else:
             virt = self.base_virtual + f"{data.name}/"
+
+        try:
+            await self.repo.get_by_virtual_path(virt)
+        except NoResultFound:
+            pass
+        else:
+            raise FolderAlreadyExistsError(virt)
 
         # physical path
         phys_path = self.disk.compute_storage_path(virt)

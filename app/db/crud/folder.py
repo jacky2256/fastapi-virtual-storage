@@ -71,6 +71,21 @@ class FolderRepository:
             raise NoResultFound(f"Folder with id {folder_id} not found")
         return FolderDB.model_validate(folder)
 
+    async def get_by_virtual_path(self, virtual_path: str) -> FolderDB:
+        """
+        Retrieve a single Folder by its ID.
+
+        :param folder_id: the UUID of the folder to fetch
+        :returns: FolderDB if found, or None if no matching record exists
+        """
+        q = await self.session.execute(
+            select(FolderORM).where(FolderORM.virtual_path == virtual_path)
+        )
+        folder = q.scalar_one_or_none()
+        if folder is None:
+            raise NoResultFound(f"Folder with path {virtual_path} not found")
+        return FolderDB.model_validate(folder)
+
     async def list_by_parent(self, parent_id: Optional[UUID]) -> List[FolderDB]:
         """
         List all child folders under a given parent.
