@@ -53,19 +53,20 @@ class FileService:
 
     async def upload(
         self,
-        data: FileIn,
+        file_name: Optional[str],
+        uploader_user_id: uuid.UUID,
+        folder_path: str,
         stream: BinaryIO
     ) -> FileOut:
+        folder_info = await self.folder_repo.get_by_virtual_path(folder_path)
+
         # 1) Сгенерировать UUID для файла
         file_id = uuid.uuid4()
+        f_name = str(file_id) if file_name is None else file_name
 
         # 2) Определить виртуальный путь с этим UUID и расширением
-        ext = Path(data.name).suffix  # например, ".png"
-        if data.folder_id:
-            folder = await self.folder_repo.get_by_id(data.folder_id)
-            base_virt = folder.virtual_path.rstrip("/")
-        else:
-            base_virt = ""
+        ext = Path(f_name).suffix  # например, ".png"
+        base_virt = folder_info.virtual_path.rstrip("/")
         virt_file_path = f"{base_virt}/{file_id}{ext}"
 
         # 3) Сохранить на диск в папку base_virt
@@ -79,9 +80,14 @@ class FileService:
         size_bytes = phys_path.stat().st_size
         mime_type = await self.disk.get_mime_type(phys_path)
 
+        file_info = FileIn(
+            name=f_name,
+            uploader_user_id=uploader_user_id,
+            folder_id=folder_info.id,
+        )
         # 5) Создать запись в БД, передав нужные поля
         db_item: FileDB = await self.repo.create(
-            data,
+            file_info,
             storage_path=str(phys_path),
             virtual_path=virt_file_path,
             size_bytes=size_bytes,
@@ -121,10 +127,18 @@ class FileService:
         )
         return FileOut.model_validate(updated_db.model_dump())
 
-    async def delete(self, file_id: UUID) -> None:
+    async def delete_file_by_id(self, file_id: UUID) -> None:
         """
         Remove file both from disk and database.
         """
         db_item: FileDB = await self.repo.get_by_id(file_id)
         await self.disk.delete_file(Path(db_item.storage_path))
         await self.repo.delete(file_id)
+
+    async def delete_file_by_path(self, path: str) -> None:
+        """
+        Remove file both from disk and database.
+        """
+        db_item: FileDB = await self.repo.get_by_path(path)
+        await self.disk.delete_file(Path(db_item.storage_path))
+        await self.repo.delete(db_item.id)

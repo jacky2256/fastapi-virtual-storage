@@ -17,16 +17,16 @@ router = APIRouter(
 )
 
 @router.get(
-    "/download",
+    "/download/by-path",
     response_class=FileResponse,
     status_code=status.HTTP_200_OK,
     responses={
         404: {"description": "File not found"},
         500: {"description": "Internal server error"},
     },
-    summary="Download a file by its ID",
+    summary="Download a file by its path",
 )
-async def download_file(
+async def download_file_by_path(
     file_path: str,
     service: FileService = Depends(get_file_service),
 ):
@@ -82,7 +82,7 @@ async def list_files(
 async def upload_file(
     file: UploadFile,
     uploader_user_id: uuid.UUID = Form(..., description="Uploader's UUID"),
-    folder_id: Optional[uuid.UUID] = Form(None, description="Parent folder UUID"),
+    folder_path: str = Form(..., description="Virtual path for the file"),
     service: FileService = Depends(get_file_service),
 ) -> FileOut:
     """
@@ -91,17 +91,17 @@ async def upload_file(
     - **Form Data**:
       - `file` (UploadFile): The file to upload.
       - `uploader_user_id` (UUID): ID of uploading user.
-      - `folder_id` (UUID, optional): Parent folder ID.
+      - `folder_path` str: Path of folder where the file will be stored.
 
     - **Response** (`FileOut`): Details of the stored file.
     """
     try:
-        dto = FileIn(
-            name=file.filename,
+        return await service.upload(
+            file_name=file.filename,
             uploader_user_id=uploader_user_id,
-            folder_id=folder_id,
+            folder_path=folder_path,
+            stream=file.file,
         )
-        return await service.upload(dto, file.file)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except IntegrityError as e:
@@ -143,24 +143,24 @@ async def update_file(
 
 
 @router.delete(
-    "/{file_id}",
+    "/by-path",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         204: {"description": "File deleted successfully"},
         404: {"description": "File not found"},
         500: {"description": "Internal server error"},
     },
-    summary="Delete a file by its ID",
+    summary="Delete a file by its Path",
 )
 async def delete_file(
-    file_id: uuid.UUID,
+    file_path: str,
     service: FileService = Depends(get_file_service),
 ) -> None:
     """
-    Delete a file given its UUID.
+    Delete a file given its Path.
     """
     try:
-        await service.delete(file_id)
+        await service.delete_file_by_path(file_path)
     except NoResultFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
