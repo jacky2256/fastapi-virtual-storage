@@ -4,8 +4,10 @@ import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status as http_status
+from fastapi_pagination import Page
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
+from app.schemas import PaginationParamsSchema
 from app.schemas.folder import FolderIn, FolderOut, FolderUpdate
 from app.services.folder_service import FolderService
 from app.dependencies import get_folder_service
@@ -15,6 +17,55 @@ router = APIRouter(
     prefix="/folders",
     tags=["Folders"]
 )
+
+@router.get(
+    "/",
+    response_model=Page[FolderOut],
+    status_code=http_status.HTTP_200_OK,
+    responses={
+        500: {"description": "Internal server error"},
+    }
+)
+async def list_folders(
+    params: PaginationParamsSchema = Depends(),
+    parent_id: Optional[uuid.UUID] = Query(
+        None,
+        description="UUID of the parent folder (omit for root-level folders)"
+    ),
+    service: FolderService = Depends(get_folder_service),
+) -> Page[FolderOut]:
+    """
+    Retrieve a paginated list of child folders under a given parent.
+
+    - **Query Parameters**:
+      - `page` (int): Page number (default: 1).
+      - `size` (int): Items per page (default: 10).
+      - `parent_id` (UUID, optional): ID of the parent folder; if omitted, returns root folders.
+
+    - **Response Model** (`Page[FolderOut]`):
+      A paginated set of folder objects, each containing:
+      | Field           | Type     | Description                          |
+      |-----------------|----------|--------------------------------------|
+      | `id`            | UUID     | Folder unique identifier             |
+      | `name`          | string   | Folder name                          |
+      | `parent_id`     | UUID     | Parent folder UUID (null if root)    |
+      | `creator_user_id` | UUID   | ID of the user who created it        |
+      | `is_published`  | bool     | Visibility flag                      |
+      | `virtual_path`  | string   | Virtual path on the site             |
+      | `created_at`    | datetime | Creation timestamp                   |
+      | `updated_at`    | datetime | Last modification timestamp          |
+
+    - **Responses**:
+      - **200 OK**: Page of folders returned successfully.
+      - **500 Internal Server Error**: Unexpected error occurred.
+    """
+    try:
+        return await service.list_folders_by_parent_id(params, parent_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 @router.get(
     "/by-path",
@@ -111,40 +162,6 @@ async def get_folder_by_id(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
-
-@router.get(
-    "/",
-    response_model=List[FolderOut],
-    status_code=http_status.HTTP_200_OK,
-    responses={
-        500: {"description": "Internal server error"},
-    }
-)
-async def list_folders(
-    parent_id: Optional[uuid.UUID] = None,
-    service: FolderService = Depends(get_folder_service),
-) -> List[FolderOut]:
-    """
-    List child folders under a given parent.
-
-    - **Query Parameter**:
-      - `parent_id` (UUID, optional): The ID of the parent folder.
-        If omitted or null, returns root-level folders.
-
-    - **Response Model** (`List[FolderOut]`):
-      A JSON array of folder objects as described in **FolderOut** above.
-
-    - **Responses**:
-      - **200 OK**: List of folders returned successfully.
-      - **500 Internal Server Error**: Unexpected error occurred.
-    """
-    try:
-        return await service.list(parent_id)
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,

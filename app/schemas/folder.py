@@ -41,5 +41,6 @@ class FolderDB(BaseModel):
     updated_at: datetime = Field(..., description="Дата обновления папки")
 
     model_config = ConfigDict(
-        from_attributes=True
+        from_attributes=True,
+        extra="ignore",
     )

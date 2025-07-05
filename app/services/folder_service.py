@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Optional, List
 from uuid import UUID
 
+from fastapi_pagination import Page
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
 from app.db.crud.folder import FolderRepository
+from app.schemas import PaginationParamsSchema
 from app.services.folder_disc_service import FolderDiskService
 from app.schemas.folder import FolderIn, FolderUpdate, FolderDB, FolderOut
 from app.utils.exceptions import FolderAlreadyExistsError
@@ -34,12 +36,19 @@ class FolderService:
         self.disk = disk
         self.base_virtual = base_virtual.rstrip("/") + "/"
 
-    async def list(self, parent_id: Optional[UUID] = None) -> List[FolderOut]:
+    async def list_folders_by_parent_id(
+        self,
+        params: PaginationParamsSchema,
+        parent_id: Optional[UUID] = None
+    ) -> Page[FolderOut]:
         """
-        List child folders under a given parent.
+        Retrieve a paginated list of child folders under a given parent.
+
+        :param params: pagination parameters (page, size, etc.)
+        :param parent_id: UUID of the parent folder, or None for root folders
+        :returns: Page[FolderOut]
         """
-        db_items: List[FolderDB] = await self.repo.list_by_parent(parent_id)
-        return [FolderOut.model_validate(item) for item in db_items]
+        return await self.repo.list_by_parent_paginated(parent_id, params)
 
     async def get_by_id(self, folder_id: UUID) -> FolderOut:
         """

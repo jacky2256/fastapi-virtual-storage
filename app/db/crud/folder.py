@@ -6,9 +6,11 @@ from uuid import UUID
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
+from fastapi_pagination.ext.sqlalchemy import apaginate
+from fastapi_pagination import Page
 
 from app.db.models import Folder as FolderORM
-from app.schemas.folder import FolderIn, FolderUpdate, FolderDB
+from app.schemas import FolderIn, FolderUpdate, FolderDB, PaginationParamsSchema, FolderOut
 
 
 class FolderRepository:
@@ -86,19 +88,26 @@ class FolderRepository:
             raise NoResultFound(f"Folder with path {virtual_path} not found")
         return FolderDB.model_validate(folder)
 
-    async def list_by_parent(self, parent_id: Optional[UUID]) -> List[FolderDB]:
+    async def list_by_parent_paginated(
+            self,
+            parent_id: Optional[UUID],
+            params: PaginationParamsSchema
+    ) -> Page[FolderOut]:
         """
-        List all child folders under a given parent.
+        Return a paginated list of child folders under a given parent.
 
-        :param parent_id: the UUID of the parent folder, or None for root folders
-        :returns: a list of FolderDB objects ordered by name
+        :param parent_id: parent folder UUID, or None for root
+        :param params: PaginationParamsSchema (page, size, etc.)
+        :returns: Page[FolderOut]
         """
-        q = await self.session.execute(
+        query = (
             select(FolderORM)
             .where(FolderORM.parent_id == parent_id)
             .order_by(FolderORM.name)
         )
-        return [FolderDB.model_validate(f) for f in q.scalars().all()]
+        # use the async SQLAlchemy paginator
+        page: Page[FolderOut] = await apaginate(self.session, query, params)
+        return page
 
     async def update(
         self,
