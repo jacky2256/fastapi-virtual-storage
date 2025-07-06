@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Optional, List, BinaryIO
 from uuid import UUID
 
+from fastapi_pagination import Page
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
 from app.db.crud import FileRepository, FolderRepository
+from app.schemas import PaginationParamsSchema
 from app.services import FileDiskService
 from app.schemas.file import FileIn, FileUpdate, FileDB, FileOut, FileDownloadInfo
 
@@ -33,12 +35,16 @@ class FileService:
         self.folder_repo = folder_repo
         self.disk = disk
 
-    async def list(self, folder_id: Optional[UUID] = None) -> List[FileOut]:
+    async def list_files_by_folder_path(
+            self,
+            path: str,
+            params: PaginationParamsSchema,
+    ) -> Page[FileOut]:
         """
         List files under a given folder.
         """
-        db_items: List[FileDB] = await self.repo.list_by_folder(folder_id)
-        return [FileOut.model_validate(item.model_dump()) for item in db_items]
+        folder = await self.folder_repo.get_by_virtual_path(path)
+        return await self.repo.list_by_folder_path(folder.id, params)
 
     async def get_file_info_by_id(self, file_id: UUID) -> FileOut:
         """

@@ -3,12 +3,15 @@
 from typing import Optional, List
 from uuid import UUID
 
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound, IntegrityError
 
 from app.db.models import File as FileORM
-from app.schemas.file import FileIn, FileUpdate, FileDB
+from app.schemas import PaginationParamsSchema
+from app.schemas.file import FileIn, FileUpdate, FileDB, FileOut
 
 
 class FileRepository:
@@ -91,19 +94,24 @@ class FileRepository:
             raise NoResultFound(f"File with path {file_path} not found")
         return FileDB.model_validate(file)
 
-    async def list_by_folder(self, folder_id: Optional[UUID]) -> List[FileDB]:
+    async def list_by_folder_path(
+            self,
+            folder_id: UUID,
+            params: PaginationParamsSchema,
+    ) -> Page[FileOut]:
         """
         List all files under a given folder.
 
         :param folder_id: the UUID of the parent folder, or None for unassigned
         :returns: a list of FileDB objects ordered by name
         """
-        q = await self.session.execute(
+        query = (
             select(FileORM)
             .where(FileORM.folder_id == folder_id)
             .order_by(FileORM.name)
         )
-        return [FileDB.model_validate(f) for f in q.scalars().all()]
+        page: Page[FileOut] = await apaginate(self.session, query, params)
+        return page
 
     async def update(
         self,

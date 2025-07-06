@@ -5,8 +5,10 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form
 from fastapi.responses import FileResponse
+from fastapi_pagination import Page
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
+from app.schemas import PaginationParamsSchema
 from app.schemas.file import FileIn, FileOut, FileUpdate
 from app.services import FileService
 from app.dependencies import get_file_service
@@ -48,21 +50,26 @@ async def download_file_by_path(
 
 @router.get(
     "/",
-    response_model=List[FileOut],
+    response_model=Page[FileOut],
     status_code=status.HTTP_200_OK,
-    responses={500: {"description": "Internal server error"}},
-    summary="List files in a folder",
+    responses={
+        404: {"description": "Folder not found"},
+        500: {"description": "Internal server error"}
+    },
 )
 async def list_files(
-    folder_id: Optional[uuid.UUID] = None,
+    folder_path: str,
+    params: PaginationParamsSchema = Depends(),
     service: FileService = Depends(get_file_service),
-) -> List[FileOut]:
+) -> Page[FileOut]:
     """
     List all files under the specified folder.
-    If `folder_id` is omitted, lists all unassigned files.
+    If `folder_path` is omitted, lists all unassigned files.
     """
     try:
-        return await service.list(folder_id)
+        return await service.list_files_by_folder_path(folder_path, params)
+    except NoResultFound as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
